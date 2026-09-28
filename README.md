@@ -35,11 +35,10 @@ proxy.js                  ← inti proxy (tanpa platform-specific API)
 platforms/cloudflare.js   ← entry Cloudflare Workers
 platforms/deno.js         ← entry Deno Deploy
 platforms/node.js         ← entry Node 18+ (VPS/Render/Railway/Miget/lokal)
-api/index.js              ← entry Vercel Edge Function
+server.mjs                ← entry Vercel (Node server runtime, terdeteksi otomatis)
 wrangler.toml             ← konfig Cloudflare
 vercel.json               ← konfig Vercel
 package.json              ← type: module (buat Node)
-```
 
 Inti hanya memakai `Request`/`Response`/`fetch`/`ReadableStream`/`crypto` — API Web standar, jadi file yang sama jalan di semua platform.
 
@@ -75,7 +74,7 @@ Free plan Workers: 100.000 request/hari, CPU 10 ms/invocation (I/O jaringan tida
 - Tambah env `PROXY_KEY` di project settings.
 - Atau CLI: `deployctl deploy --project=<nama> platforms/deno.js` dengan `--env=PROXY_KEY=...`.
 
-### Vercel (Edge Function)
+### Vercel
 
 ```bash
 vercel login && vercel
@@ -83,7 +82,9 @@ vercel env add PROXY_KEY
 vercel --prod
 ```
 
-Semua path dipetakan ke `api/index.js` (lihat `vercel.json`); edge runtime dipaksa supaya streaming tidak kena batas serverless Node standar.
+Vercel mendeteksi `server.mjs` di root sebagai Node server entrypoint (`server.listen()` dipanggil saat startup) dan merutekan semua request ke sana, jadi tidak ada rewrite atau pemetaan path yang perlu diatur — routing `/v1/...` dan `/healthz` ditangani inti proxy. Runtime Node dipilih karena Vercel kini merekomendasikannya di atas Edge dan streaming SSE-nya native; `vercel.json` cukup memuat `$schema`.
+
+Catatan penting: **jangan** menambahkan key `functions` berisi `"runtime": "edge"`. Pada skema Vercel, `functions` adalah objek `{glob: {...}}` dan `runtime` di dalamnya berisi nama paket npm runtime, bukan `"edge"`, sehingga bentuk itu gagal validasi (`functions.runtime should be object`).
 
 ### Node / VPS / Render / Railway / Miget
 
@@ -158,6 +159,7 @@ Test live yang sudah dijalankan terhadap upstream asli (2026-09-28):
 - 2 model berbeda (`big-pickle`, `nemotron-3-ultra-free`) → `200`
 - error upstream diteruskan apa adanya (model berbayar → `401 Missing API key`)
 - server Node asli (HTTP nyata, `Readable.toWeb`) → semua kasus di atas lolos
+- entry `server.mjs` Vercel (diimport dengan env, lalu di-request via HTTP nyata) → healthz 200, auth 401, models 8, non-stream terkolaps, stream +`[DONE]`, 404
 
 ## Lisensi
 
