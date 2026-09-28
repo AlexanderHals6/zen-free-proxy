@@ -1,0 +1,6 @@
+{
+  "name": "zen-free-proxy",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=18" }
+}

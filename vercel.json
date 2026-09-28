@@ -1,0 +1,4 @@
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index.js" }],
+  "functions": { "runtime": "edge" }
+}

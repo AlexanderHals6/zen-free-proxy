@@ -1,0 +1,12 @@
+# Node / Deno
+node_modules/
+*.log
+
+# Cloudflare
+.wrangler/
+.dev.vars
+
+# Vercel
+.vercel/
+.env
+.env.*
