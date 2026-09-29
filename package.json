@@ -1,6 +1,8 @@
 {
-  "name": "zen-free-proxy",
   "private": true,
   "type": "module",
+  "scripts": {
+    "start": "node platforms/node.js"
+  },
   "engines": { "node": ">=18" }
 }

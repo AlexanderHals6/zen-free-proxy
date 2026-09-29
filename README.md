@@ -34,11 +34,13 @@ Model di luar daftar ini (termasuk semua `claude-*`, `gpt-*`, `gemini-*` polos) 
 proxy.js                  ← inti proxy (tanpa platform-specific API)
 platforms/cloudflare.js   ← entry Cloudflare Workers
 platforms/deno.js         ← entry Deno Deploy
-platforms/node.js         ← entry Node 18+ (VPS/Render/Railway/Miget/lokal)
+platforms/node.js         ← entry Node 18+ (VPS/suga/Render/Railway/lokal)
 server.mjs                ← entry Vercel (Node server runtime, terdeteksi otomatis)
+Dockerfile                ← image container untuk host Docker/suga
 wrangler.toml             ← konfig Cloudflare
 vercel.json               ← konfig Vercel
-package.json              ← type: module (buat Node)
+package.json              ← start script + type: module
+```
 
 Inti hanya memakai `Request`/`Response`/`fetch`/`ReadableStream`/`crypto` — API Web standar, jadi file yang sama jalan di semua platform.
 
@@ -70,7 +72,7 @@ Free plan Workers: 100.000 request/hari, CPU 10 ms/invocation (I/O jaringan tida
 
 ### Deno Deploy
 
-- Upload repo (atau langsung file `platforms/deno.js`) di https://dash.deno.com → New Project → Deploy.
+- Upload repo (atau langsung file `platforms/deno.js`) di **console.deno.com** — bukan `dash.deno.com`, karena Deno Deploy Classic ditutup 20 Juli 2026 → New Project → Deploy.
 - Tambah env `PROXY_KEY` di project settings.
 - Atau CLI: `deployctl deploy --project=<nama> platforms/deno.js` dengan `--env=PROXY_KEY=...`.
 
@@ -93,6 +95,23 @@ node platforms/node.js
 # PROXY_KEY=... PORT=8080 node platforms/node.js
 ```
 
+### suga.app / host Docker (container selalu menyala)
+
+suga.app bisa deploy langsung dari repo GitHub (0.5 vCPU / 1 GiB RAM gratis, tanpa kartu). Agar container **tidak langsung exit**, jalankan lewat Dockerfile dengan CMD persisten:
+
+```bash
+# 1) Deploy repo ini lewat suga (hubungkan akun GitHub, pilih repo zen-free-proxy). Repo sudah punya:
+#      - Dockerfile            → membangun image dari node:20-alpine, menyetel PORT/HOST
+#      - package.json "start"  → node platforms/node.js (server long-running)
+#    suga biasanya menjalankan `npm start` secara otomatis.
+
+# 2) Set env di dashboard suga:
+PROXY_KEY=<key acak panjang>
+# PORT dan HOST opsional (default 8080 / 0.0.0.0, cocok dengan Dockerfile)
+```
+
+Kalau suga memakai Dockerfile, `CMD ["node", "platforms/node.js"]` itulah yang menjaga container tetap hidup — server membuka listener dan tidak pernah selesai. Kalau masih dapat "Container not long-running", pastikan Platform di suga diatur ke **Docker** (bukan Buildpack/static).
+
 ## Pakai dari opencode
 
 Targetkan ke URL proxy sebagai provider OpenAI-compatible:
@@ -100,7 +119,7 @@ Targetkan ke URL proxy sebagai provider OpenAI-compatible:
 ```bash
 opencode auth login
 # pilih "Other" / custom model provider:
-#   Provider base URL : https://zen-free-proxy.<subdomain>.workers.dev/v1
+#   Provider base URL : https://<proyek>.suga.app/v1   (atau URL Workers/Vercel kamu)
 #   API key          : <PROXY_KEY kamu>
 ```
 
