@@ -1,3 +1,14 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json"
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/:path((?!api/).*)",
+      "destination": "/api/index?path=:path"
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 300
+    }
+  }
 }

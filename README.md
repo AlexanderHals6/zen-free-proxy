@@ -35,7 +35,7 @@ proxy.js                  ← inti proxy (tanpa platform-specific API)
 platforms/cloudflare.js   ← entry Cloudflare Workers
 platforms/deno.js         ← entry Deno Deploy
 platforms/node.js         ← entry Node 18+ (VPS/suga/Render/Railway/lokal)
-server.mjs                ← entry Vercel (Node server runtime, terdeteksi otomatis)
+api/index.js             ← entry Vercel Function (rewrite memetakan semua path ke sini)
 Dockerfile                ← image container untuk host Docker/suga
 wrangler.toml             ← konfig Cloudflare
 vercel.json               ← konfig Vercel
@@ -84,7 +84,18 @@ vercel env add PROXY_KEY
 vercel --prod
 ```
 
-Vercel mendeteksi `server.mjs` di root sebagai Node server entrypoint (`server.listen()` dipanggil saat startup) dan merutekan semua request ke sana, jadi tidak ada rewrite atau pemetaan path yang perlu diatur — routing `/v1/...` dan `/healthz` ditangani inti proxy. Runtime Node dipilih karena Vercel kini merekomendasikannya di atas Edge dan streaming SSE-nya native; `vercel.json` cukup memuat `$schema`.
+Vercel ditautkan ke **satu Vercel Function** (`api/index.js`) lewat `vercel.json`:
+
+```jsonc
+{
+  "rewrites": [
+    { "source": "/:path((?!api/).*)", "destination": "/api/index?path=:path" }
+  ],
+  "functions": { "api/index.js": { "maxDuration": 300 } }
+}
+```
+
+Rewrite mengarahkan semua request (kecuali `/api` sendiri) ke function tunggal, dan **path asli dikirim sebagai query** — `?path=v1/models`, dst. Adapter `api/index.js` memulihkan path itu sebelum memanggil core, jadi routing `/v1/...` dan `/healthz` tetap otoritatif di inti. Function ini berjalan di Node.js runtime (Vercel kini merekomendasikannya di atas Edge) dengan `maxDuration: 300` detik untuk streaming.
 
 Catatan penting: **jangan** menambahkan key `functions` berisi `"runtime": "edge"`. Pada skema Vercel, `functions` adalah objek `{glob: {...}}` dan `runtime` di dalamnya berisi nama paket npm runtime, bukan `"edge"`, sehingga bentuk itu gagal validasi (`functions.runtime should be object`).
 
