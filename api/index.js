@@ -7,16 +7,17 @@
 // destination pathname; both cases are normalized here before the shared core
 // is called, keeping the proxy's own routing authoritative on every platform.
 import { handleRequest } from "../proxy.js";
+export default {
+  async fetch(request) {
+    const url = new URL(request.url);
+    const via = url.searchParams.get("path");
 
-export default async function handler(request) {
-  const url = new URL(request.url);
-  const via = url.searchParams.get("path");
+    // Prefer the captured original path when present.
+    let pathname = via && via.length > 0 ? "/" + via.replace(/^\/+/, "") : url.pathname;
+    if (pathname.includes("?")) pathname = pathname.split("?")[0];
 
-  // Prefer the captured original path when present.
-  let pathname = via && via.length > 0 ? "/" + via.replace(/^\/+/, "") : url.pathname;
-  if (pathname.includes("?")) pathname = pathname.split("?")[0];
-
-  const host = request.headers.get("host") || "placeholder.invalid";
-  const normalized = new Request(`https://${host}${pathname}`, request);
-  return handleRequest(normalized, { env: process.env });
-}
+    const host = request.headers.get("host") || "placeholder.invalid";
+    const normalized = new Request(`https://${host}${pathname}`, request);
+    return handleRequest(normalized, { env: process.env });
+  },
+};
